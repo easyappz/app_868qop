@@ -8,54 +8,8 @@ paths:
     get:
       operationId: api_hello_retrieve
       description: Get a hello world message
-      tags:
-      - api
-      security:
-      - {}
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Message'
-          description: ''
-  /api/auth/register/:
-    post:
-      operationId: api_auth_register_create
-      description: Register a new member
-      tags:
-      - auth
-      security:
-      - {}
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/RegisterRequest'
-      responses:
-        '201':
-          description: Created
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Member'
-        '400':
-          description: Bad Request
-  /api/auth/login/:
-    post:
-      operationId: api_auth_login_create
-      description: Login and receive JWT token
-      tags:
-      - auth
-      security:
-      - {}
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/LoginRequest'
+      tags: [misc]
+      security: []
       responses:
         '200':
           description: OK
@@ -64,20 +18,68 @@ paths:
               schema:
                 type: object
                 properties:
-                  token:
+                  message:
                     type: string
-                  member:
-                    $ref: '#/components/schemas/Member'
-        '400':
-          description: Bad Request
+                  timestamp:
+                    type: string
+                    format: date-time
+                required: [message, timestamp]
+  /api/auth/register/:
+    post:
+      operationId: auth_register
+      tags: [auth]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                phone: { type: string }
+                password: { type: string }
+              required: [name, phone, password]
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Member'
+        '400': { description: Bad Request }
+  /api/auth/login/:
+    post:
+      operationId: auth_login
+      tags: [auth]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                phone: { type: string }
+                password: { type: string }
+              required: [phone, password]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token: { type: string }
+                  member: { $ref: '#/components/schemas/Member' }
+                required: [token, member]
+        '400': { description: Bad Request }
   /api/me/:
     get:
-      operationId: api_me_retrieve
-      description: Get current member
-      tags:
-      - members
-      security:
-      - bearerAuth: []
+      operationId: me_get
+      tags: [profile]
+      security: [{ bearerAuth: [] }]
       responses:
         '200':
           description: OK
@@ -85,15 +87,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Member'
-        '401':
-          description: Unauthorized
+        '401': { description: Unauthorized }
     patch:
-      operationId: api_me_partial_update
-      description: Update current member
-      tags:
-      - members
-      security:
-      - bearerAuth: []
+      operationId: me_patch
+      tags: [profile]
+      security: [{ bearerAuth: [] }]
       requestBody:
         required: true
         content:
@@ -107,43 +105,31 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Member'
-        '400':
-          description: Bad Request
-        '401':
-          description: Unauthorized
+        '400': { description: Bad Request }
+        '401': { description: Unauthorized }
   /api/listings/:
     get:
-      operationId: api_listings_list
-      description: Список объявлений с фильтрами
-      tags:
-      - listings
+      operationId: listings_list
+      tags: [listings]
       parameters:
-      - in: query
-        name: category
-        schema:
-          type: string
-      - in: query
-        name: search
-        schema:
-          type: string
-      - in: query
-        name: price_min
-        schema:
-          type: string
-      - in: query
-        name: price_max
-        schema:
-          type: string
-      - in: query
-        name: date_from
-        schema:
-          type: string
-          format: date
-      - in: query
-        name: date_to
-        schema:
-          type: string
-          format: date
+        - in: query
+          name: category
+          schema: { type: string, enum: [automobiles, phones, realty] }
+        - in: query
+          name: search
+          schema: { type: string }
+        - in: query
+          name: price_min
+          schema: { type: number }
+        - in: query
+          name: price_max
+          schema: { type: number }
+        - in: query
+          name: date_from
+          schema: { type: string, format: date }
+        - in: query
+          name: date_to
+          schema: { type: string, format: date }
       responses:
         '200':
           description: OK
@@ -151,21 +137,17 @@ paths:
             application/json:
               schema:
                 type: array
-                items:
-                  $ref: '#/components/schemas/Listing'
+                items: { $ref: '#/components/schemas/Listing' }
     post:
-      operationId: api_listings_create
-      description: Создать объявление
-      tags:
-      - listings
-      security:
-      - bearerAuth: []
+      operationId: listings_create
+      tags: [listings]
+      security: [{ bearerAuth: [] }]
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ListingWrite'
+              $ref: '#/components/schemas/ListingCreateUpdate'
       responses:
         '201':
           description: Created
@@ -173,22 +155,17 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Listing'
-        '400':
-          description: Bad Request
-        '401':
-          description: Unauthorized
-  /api/listings/{pk}/:
-    get:
-      operationId: api_listings_retrieve
-      description: Получить объявление
-      tags:
-      - listings
-      parameters:
+        '400': { description: Bad Request }
+        '401': { description: Unauthorized }
+  /api/listings/{id}/:
+    parameters:
       - in: path
-        name: pk
+        name: id
         required: true
-        schema:
-          type: integer
+        schema: { type: integer }
+    get:
+      operationId: listings_retrieve
+      tags: [listings]
       responses:
         '200':
           description: OK
@@ -196,27 +173,17 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Listing'
-        '404':
-          description: Not Found
+        '404': { description: Not Found }
     patch:
-      operationId: api_listings_partial_update
-      description: Обновить объявление
-      tags:
-      - listings
-      security:
-      - bearerAuth: []
-      parameters:
-      - in: path
-        name: pk
-        required: true
-        schema:
-          type: integer
+      operationId: listings_update
+      tags: [listings]
+      security: [{ bearerAuth: [] }]
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ListingWrite'
+              $ref: '#/components/schemas/ListingCreateUpdate'
       responses:
         '200':
           description: OK
@@ -224,44 +191,24 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Listing'
-        '400':
-          description: Bad Request
-        '401':
-          description: Unauthorized
-        '403':
-          description: Forbidden
-        '404':
-          description: Not Found
+        '400': { description: Bad Request }
+        '401': { description: Unauthorized }
+        '403': { description: Forbidden }
+        '404': { description: Not Found }
     delete:
-      operationId: api_listings_destroy
-      description: Удалить объявление
-      tags:
-      - listings
-      security:
-      - bearerAuth: []
-      parameters:
-      - in: path
-        name: pk
-        required: true
-        schema:
-          type: integer
+      operationId: listings_delete
+      tags: [listings]
+      security: [{ bearerAuth: [] }]
       responses:
-        '204':
-          description: No Content
-        '401':
-          description: Unauthorized
-        '403':
-          description: Forbidden
-        '404':
-          description: Not Found
+        '204': { description: No Content }
+        '401': { description: Unauthorized }
+        '403': { description: Forbidden }
+        '404': { description: Not Found }
   /api/chats/start/:
     post:
-      operationId: api_chats_start_create
-      description: Начать чат с пользователем по желанию с привязкой к объявлению
-      tags:
-      - chats
-      security:
-      - bearerAuth: []
+      operationId: chats_start
+      tags: [chat]
+      security: [{ bearerAuth: [] }]
       requestBody:
         required: true
         content:
@@ -269,12 +216,9 @@ paths:
             schema:
               type: object
               properties:
-                recipient_id:
-                  type: integer
-                listing_id:
-                  type: integer
-              required:
-              - recipient_id
+                recipient_id: { type: integer }
+                listing_id: { type: integer, nullable: true }
+              required: [recipient_id]
       responses:
         '200':
           description: OK
@@ -282,20 +226,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ChatThread'
-        '400':
-          description: Bad Request
-        '401':
-          description: Unauthorized
-        '404':
-          description: Not Found
+        '400': { description: Bad Request }
+        '401': { description: Unauthorized }
   /api/chats/:
     get:
-      operationId: api_chats_list
-      description: Список чатов пользователя
-      tags:
-      - chats
-      security:
-      - bearerAuth: []
+      operationId: chats_list
+      tags: [chat]
+      security: [{ bearerAuth: [] }]
       responses:
         '200':
           description: OK
@@ -303,24 +240,18 @@ paths:
             application/json:
               schema:
                 type: array
-                items:
-                  $ref: '#/components/schemas/ChatThread'
-        '401':
-          description: Unauthorized
+                items: { $ref: '#/components/schemas/ChatThread' }
+        '401': { description: Unauthorized }
   /api/chats/{thread_id}/messages/:
-    get:
-      operationId: api_chat_messages_list
-      description: Список сообщений чата
-      tags:
-      - chats
-      security:
-      - bearerAuth: []
-      parameters:
+    parameters:
       - in: path
         name: thread_id
         required: true
-        schema:
-          type: integer
+        schema: { type: integer }
+    get:
+      operationId: chat_messages_list
+      tags: [chat]
+      security: [{ bearerAuth: [] }]
       responses:
         '200':
           description: OK
@@ -328,25 +259,13 @@ paths:
             application/json:
               schema:
                 type: array
-                items:
-                  $ref: '#/components/schemas/ChatMessage'
-        '401':
-          description: Unauthorized
-        '404':
-          description: Not Found
+                items: { $ref: '#/components/schemas/Message' }
+        '401': { description: Unauthorized }
+        '404': { description: Not Found }
     post:
-      operationId: api_chat_messages_create
-      description: Отправить сообщение в чат
-      tags:
-      - chats
-      security:
-      - bearerAuth: []
-      parameters:
-      - in: path
-        name: thread_id
-        required: true
-        schema:
-          type: integer
+      operationId: chat_messages_send
+      tags: [chat]
+      security: [{ bearerAuth: [] }]
       requestBody:
         required: true
         content:
@@ -354,198 +273,87 @@ paths:
             schema:
               type: object
               properties:
-                content:
-                  type: string
-              required:
-              - content
+                content: { type: string }
+              required: [content]
       responses:
         '201':
           description: Created
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ChatMessage'
-        '400':
-          description: Bad Request
-        '401':
-          description: Unauthorized
-        '404':
-          description: Not Found
+                $ref: '#/components/schemas/Message'
+        '400': { description: Bad Request }
+        '401': { description: Unauthorized }
+        '404': { description: Not Found }
 components:
-  schemas:
-    Message:
-      type: object
-      properties:
-        message:
-          type: string
-          maxLength: 200
-        timestamp:
-          type: string
-          format: date-time
-          readOnly: true
-      required:
-      - message
-      - timestamp
-    Member:
-      type: object
-      properties:
-        id:
-          type: integer
-          readOnly: true
-        name:
-          type: string
-        phone:
-          type: string
-        about:
-          type: string
-        date_joined:
-          type: string
-          format: date-time
-      required:
-      - id
-      - name
-      - phone
-    MemberUpdate:
-      type: object
-      properties:
-        name:
-          type: string
-        phone:
-          type: string
-        about:
-          type: string
-    RegisterRequest:
-      type: object
-      properties:
-        name:
-          type: string
-        phone:
-          type: string
-        password:
-          type: string
-      required:
-      - name
-      - phone
-      - password
-    LoginRequest:
-      type: object
-      properties:
-        phone:
-          type: string
-        password:
-          type: string
-      required:
-      - phone
-      - password
-    Listing:
-      type: object
-      properties:
-        id:
-          type: integer
-          readOnly: true
-        title:
-          type: string
-        description:
-          type: string
-        price:
-          type: number
-        images:
-          type: array
-          items:
-            type: string
-        phone:
-          type: string
-        category:
-          type: string
-        author:
-          $ref: '#/components/schemas/Member'
-        created_at:
-          type: string
-          format: date-time
-      required:
-      - id
-      - title
-      - description
-      - price
-      - phone
-      - category
-      - author
-      - created_at
-    ListingWrite:
-      type: object
-      properties:
-        title:
-          type: string
-        description:
-          type: string
-        price:
-          type: number
-        images:
-          type: array
-          items:
-            type: string
-        phone:
-          type: string
-        category:
-          type: string
-      required:
-      - title
-      - description
-      - price
-      - phone
-      - category
-    ChatThread:
-      type: object
-      properties:
-        id:
-          type: integer
-          readOnly: true
-        member_a:
-          $ref: '#/components/schemas/Member'
-        member_b:
-          $ref: '#/components/schemas/Member'
-        listing:
-          allOf:
-          - $ref: '#/components/schemas/Listing'
-          nullable: true
-        created_at:
-          type: string
-          format: date-time
-      required:
-      - id
-      - member_a
-      - member_b
-      - created_at
-    ChatMessage:
-      type: object
-      properties:
-        id:
-          type: integer
-          readOnly: true
-        thread_id:
-          type: integer
-        sender:
-          $ref: '#/components/schemas/Member'
-        content:
-          type: string
-        created_at:
-          type: string
-          format: date-time
-      required:
-      - id
-      - thread_id
-      - sender
-      - content
-      - created_at
   securitySchemes:
-    basicAuth:
-      type: http
-      scheme: basic
-    cookieAuth:
-      type: apiKey
-      in: cookie
-      name: sessionid
     bearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
+  schemas:
+    Member:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        phone: { type: string }
+        about: { type: string }
+        date_joined: { type: string, format: date-time }
+      required: [id, name, phone, about, date_joined]
+    MemberUpdate:
+      type: object
+      properties:
+        name: { type: string }
+        phone: { type: string }
+        about: { type: string }
+    Listing:
+      type: object
+      properties:
+        id: { type: integer }
+        author: { $ref: '#/components/schemas/Member' }
+        title: { type: string }
+        description: { type: string }
+        price: { type: number }
+        images:
+          type: array
+          items: { type: string }
+        phone: { type: string }
+        category:
+          type: string
+          enum: [automobiles, phones, realty]
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+      required: [id, author, title, description, price, images, phone, category, created_at, updated_at]
+    ListingCreateUpdate:
+      type: object
+      properties:
+        title: { type: string }
+        description: { type: string }
+        price: { type: number }
+        images:
+          type: array
+          items: { type: string }
+        phone: { type: string }
+        category:
+          type: string
+          enum: [automobiles, phones, realty]
+      required: [title, description, price, phone, category]
+    ChatThread:
+      type: object
+      properties:
+        id: { type: integer }
+        listing: { type: integer, nullable: true }
+        member_a: { $ref: '#/components/schemas/Member' }
+        member_b: { $ref: '#/components/schemas/Member' }
+        created_at: { type: string, format: date-time }
+      required: [id, member_a, member_b, created_at]
+    Message:
+      type: object
+      properties:
+        id: { type: integer }
+        thread: { type: integer }
+        sender: { $ref: '#/components/schemas/Member' }
+        content: { type: string }
+        created_at: { type: string, format: date-time }
+      required: [id, thread, sender, content, created_at]
