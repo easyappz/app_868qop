@@ -12,6 +12,11 @@ class Member(models.Model):
     def __str__(self):
         return f"{self.name} ({self.phone})"
 
+    @property
+    def is_authenticated(self) -> bool:
+        # Required for DRF's IsAuthenticated permission to work with custom user objects
+        return True
+
 
 class Listing(models.Model):
     CATEGORY_AUTOMOBILES = "automobiles"
