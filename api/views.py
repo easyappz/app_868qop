@@ -154,3 +154,78 @@ class ListingDetailView(APIView):
             return Response({"detail": "Нет прав"}, status=status.HTTP_403_FORBIDDEN)
         obj.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+# Chat
+class ChatStartView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    @extend_schema(request=dict, responses={200: ChatThreadSerializer}, description="Начать чат с пользователем по желанию с привязкой к объявлению")
+    def post(self, request):
+        me = request.member
+        recipient_id = request.data.get("recipient_id")
+        listing_id = request.data.get("listing_id")
+        if not recipient_id:
+            return Response({"detail": "recipient_id обязателен"}, status=status.HTTP_400_BAD_REQUEST)
+        if int(recipient_id) == me.id:
+            return Response({"detail": "Нельзя начать чат с собой"}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            other = Member.objects.get(id=recipient_id)
+        except Member.DoesNotExist:
+            return Response({"detail": "Пользователь не найден"}, status=status.HTTP_404_NOT_FOUND)
+
+        # Normalize order so unique_together works regardless of order
+        a, b = (me, other) if me.id < other.id else (other, me)
+        listing = None
+        if listing_id:
+            try:
+                listing = Listing.objects.get(id=listing_id)
+            except Listing.DoesNotExist:
+                return Response({"detail": "Объявление не найдено"}, status=status.HTTP_404_NOT_FOUND)
+        thread, _ = ChatThread.objects.get_or_create(member_a=a, member_b=b, listing=listing)
+        return Response(ChatThreadSerializer(thread).data)
+
+
+class ChatListView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    @extend_schema(responses={200: ChatThreadSerializer})
+    def get(self, request):
+        me = request.member
+        qs = ChatThread.objects.filter(Q(member_a=me) | Q(member_b=me)).select_related("member_a", "member_b", "listing")
+        data = ChatThreadSerializer(qs, many=True).data
+        return Response(data)
+
+
+class ChatMessagesView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_thread(self, me, thread_id):
+        try:
+            thread = ChatThread.objects.select_related("member_a", "member_b", "listing").get(id=thread_id)
+        except ChatThread.DoesNotExist:
+            return None
+        if thread.member_a_id != me.id and thread.member_b_id != me.id:
+            return None
+        return thread
+
+    @extend_schema(responses={200: MessageSerializer})
+    def get(self, request, thread_id: int):
+        me = request.member
+        thread = self.get_thread(me, thread_id)
+        if not thread:
+            return Response({"detail": "Не найдено"}, status=status.HTTP_404_NOT_FOUND)
+        msgs = thread.messages.select_related("sender").all()
+        return Response(MessageSerializer(msgs, many=True).data)
+
+    @extend_schema(request=dict, responses={201: MessageSerializer})
+    def post(self, request, thread_id: int):
+        me = request.member
+        thread = self.get_thread(me, thread_id)
+        if not thread:
+            return Response({"detail": "Не найдено"}, status=status.HTTP_404_NOT_FOUND)
+        content = request.data.get("content", "").strip()
+        if not content:
+            return Response({"detail": "Пустое сообщение"}, status=status.HTTP_400_BAD_REQUEST)
+        msg = Message.objects.create(thread=thread, sender=me, content=content)
+        return Response(MessageSerializer(msg).data, status=status.HTTP_201_CREATED)

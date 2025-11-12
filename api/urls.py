@@ -6,6 +6,9 @@ from .views import (
     MeView,
     ListingListCreateView,
     ListingDetailView,
+    ChatStartView,
+    ChatListView,
+    ChatMessagesView,
 )
 
 urlpatterns = [
@@ -15,4 +18,7 @@ urlpatterns = [
     path("me/", MeView.as_view(), name="me"),
     path("listings/", ListingListCreateView.as_view(), name="listings"),
     path("listings/<int:pk>/", ListingDetailView.as_view(), name="listing-detail"),
+    path("chats/start/", ChatStartView.as_view(), name="chat-start"),
+    path("chats/", ChatListView.as_view(), name="chat-list"),
+    path("chats/<int:thread_id>/messages/", ChatMessagesView.as_view(), name="chat-messages"),
 ]

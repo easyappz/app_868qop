@@ -254,6 +254,123 @@ paths:
           description: Forbidden
         '404':
           description: Not Found
+  /api/chats/start/:
+    post:
+      operationId: api_chats_start_create
+      description: Начать чат с пользователем по желанию с привязкой к объявлению
+      tags:
+      - chats
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                recipient_id:
+                  type: integer
+                listing_id:
+                  type: integer
+              required:
+              - recipient_id
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatThread'
+        '400':
+          description: Bad Request
+        '401':
+          description: Unauthorized
+        '404':
+          description: Not Found
+  /api/chats/:
+    get:
+      operationId: api_chats_list
+      description: Список чатов пользователя
+      tags:
+      - chats
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ChatThread'
+        '401':
+          description: Unauthorized
+  /api/chats/{thread_id}/messages/:
+    get:
+      operationId: api_chat_messages_list
+      description: Список сообщений чата
+      tags:
+      - chats
+      security:
+      - bearerAuth: []
+      parameters:
+      - in: path
+        name: thread_id
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ChatMessage'
+        '401':
+          description: Unauthorized
+        '404':
+          description: Not Found
+    post:
+      operationId: api_chat_messages_create
+      description: Отправить сообщение в чат
+      tags:
+      - chats
+      security:
+      - bearerAuth: []
+      parameters:
+      - in: path
+        name: thread_id
+        required: true
+        schema:
+          type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                content:
+                  type: string
+              required:
+              - content
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatMessage'
+        '400':
+          description: Bad Request
+        '401':
+          description: Unauthorized
+        '404':
+          description: Not Found
 components:
   schemas:
     Message:
@@ -377,6 +494,49 @@ components:
       - price
       - phone
       - category
+    ChatThread:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        member_a:
+          $ref: '#/components/schemas/Member'
+        member_b:
+          $ref: '#/components/schemas/Member'
+        listing:
+          allOf:
+          - $ref: '#/components/schemas/Listing'
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+      required:
+      - id
+      - member_a
+      - member_b
+      - created_at
+    ChatMessage:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        thread_id:
+          type: integer
+        sender:
+          $ref: '#/components/schemas/Member'
+        content:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+      required:
+      - id
+      - thread_id
+      - sender
+      - content
+      - created_at
   securitySchemes:
     basicAuth:
       type: http
